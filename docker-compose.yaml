@@ -1,0 +1,38 @@
+version: '3'
+services:
+  sample-service:
+    image: maximthomas/sample-service
+    restart: always
+    networks:
+      openam_network:
+        aliases:
+          - sample-service
+  openig:
+    image: openidentityplatform/openig
+    build: .
+    volumes:
+      - ./openig-config:/usr/local/openig-config/config:ro
+    ports:  
+      - "8081:8080"
+      - "8000:8000"
+    environment:
+      CATALINA_OPTS: -Dopenig.base=/usr/local/openig-config -Dsecured=http://sample-service:8080 -Dopenam=http://openam.example.org:8080/openam -Dws.secured=ws://sample-service:8080
+      JPDA_OPTS: -agentlib:jdwp=transport=dt_socket,address=*:8000,server=y,suspend=n
+    command: "/usr/local/tomcat/bin/catalina.sh jpda run" 
+    networks:
+      openam_network:
+        aliases:
+          - openig.example.org
+  openam:
+    image: openidentityplatform/openam
+    volumes:
+      - ./data/openam:/usr/openam/config
+    ports:  
+      - "8080:8080"
+    networks:
+      openam_network:
+        aliases:
+          - openam.example.org
+networks:
+  openam_network:
+    driver: bridge
